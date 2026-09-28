@@ -26,11 +26,16 @@ pub fn main(init: std.process.Init) !void {
         const temperature_float = try std.fmt.parseFloat(f64, temperature);
 
         const res = try map.getOrPut(allocator, station_name);
-        var val = res.value_ptr;
-        val.count += 1;
-        val.sum += temperature_float;
-        val.max = @max(val.max, temperature_float);
-        val.min = @min(val.min, temperature_float);
+        const val = res.value_ptr;
+        if (res.found_existing) {
+            val.count += 1;
+            val.sum += temperature_float;
+            val.max = @max(val.max, temperature_float);
+            val.min = @min(val.min, temperature_float);
+        } else {
+            res.key_ptr.* = try allocator.dupe(u8, station_name);
+            val.* = .{ .count = 1, .min = temperature_float, .max = temperature_float, .sum = temperature_float };
+        }
     }
 
     const SortContext = struct {
