@@ -1,18 +1,37 @@
 const std = @import("std");
 const Io = std.Io;
 
+const rapidhash = @import("rapidhash");
+
 const Stats = struct {
-    min: f64 = 0,
-    max: f64 = 0,
-    sum: f64 = 0,
-    count: u32 = 0,
+    min: f64,
+    max: f64,
+    sum: f64,
+    count: u32,
+};
+
+pub fn String(comptime V: type) type {
+    return std.array_hash_map.Custom([]const u8, V, StringContext, true);
+}
+
+pub const StringContext = struct {
+    pub fn hash(self: @This(), s: []const u8) u32 {
+        _ = self;
+        // return @truncate(rapidhash.rapidhashNano(@ptrCast(s.ptr), s.len));
+        return @truncate(std.hash.Wyhash.hash(0, s));
+    }
+    pub fn eql(self: @This(), a: []const u8, b: []const u8, b_index: usize) bool {
+        _ = self;
+        _ = b_index;
+        return std.mem.eql(u8, a, b);
+    }
 };
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
     const allocator = init.arena.allocator();
 
-    var map: std.array_hash_map.String(Stats) = .empty;
+    var map: String(Stats) = .empty;
     defer map.deinit(allocator);
 
     const input_file = try Io.Dir.cwd().openFile(io, "./measurements.txt", .{});
@@ -63,7 +82,7 @@ pub fn main(init: std.process.Init) !void {
         const stats = entry.value_ptr.*;
         const mean = stats.sum / @as(f64, @floatFromInt(stats.count));
 
-        try writer.print("{s}={d}/{d}/{d}, ", .{ station_name, stats.min, mean, stats.max });
+        try writer.print("{s}={d:.1}/{d:.1}/{d:.1}, ", .{ station_name, stats.min, mean, stats.max });
     }
     try writer.writeByte('}');
     try writer.flush();

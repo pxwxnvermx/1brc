@@ -14,6 +14,13 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    const rapidhash_translation = b.addTranslateC(.{
+        .root_source_file = b.path("src/rapidhash.h"),
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.root_module.addImport("rapidhash", rapidhash_translation.createModule());
+
     b.installArtifact(exe);
 
     const run_step = b.step("run", "Run the app");
